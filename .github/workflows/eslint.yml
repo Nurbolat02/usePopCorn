@@ -2,7 +2,7 @@ name: ESLint
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "dev"]
 
 jobs:
   eslint:
@@ -17,4 +17,10 @@ jobs:
 
       - run: npm ci
 
-      - run:  npm run lint
+      - name: Lint (strict on main)
+        if: github.ref == 'refs/heads/main'
+        run: npx eslint . --ext js,jsx --max-warnings 0
+
+      - name: Lint (errors only on dev)
+        if: github.ref == 'refs/heads/dev'
+        run: npx eslint . --ext js,jsx
