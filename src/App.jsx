@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import useMovies from "./useMovies";
 import "./App.css";
 import useMovieDetails from "./useMovieDetails";
@@ -19,7 +19,7 @@ function Loader() {
 function Error({ error }) {
   return <div>{error}</div>;
 }
-function Search({ query, setQuery, movies }) {
+function Search({ query, setQuery, movies, error }) {
   return (
     <>
       <input
@@ -30,7 +30,7 @@ function Search({ query, setQuery, movies }) {
         onChange={(e) => setQuery(e.target.value)}
       />
       <p className="num-results">
-        Found <strong>{movies?.length}</strong> results
+        Found <strong>{error ? "0" : movies?.length}</strong> results
       </p>
     </>
   );
@@ -48,7 +48,7 @@ function MovieList({ movies, setSelectedMovie, loading, error }) {
       {loading ? (
         <Loader />
       ) : error ? (
-        <Error />
+        <Error error={error} />
       ) : (
         <ul className="list">
           {movies?.map((movie) => (
@@ -170,7 +170,7 @@ function MovieDetails({ selectedMovie, watched, onCloseMovie, setWatched }) {
     </>
   );
 }
-function MovieWatchedList({ watched }) {
+function MovieWatchedList({ watched, onDeleteWatched }) {
   return (
     <>
       <ul className="list">
@@ -192,6 +192,12 @@ function MovieWatchedList({ watched }) {
                 <span>{movie.runtime} min</span>
               </p>
             </div>
+            <button
+              className="btn-delete"
+              onClick={() => onDeleteWatched(movie.imdbID)}
+            >
+              X
+            </button>
           </li>
         ))}
       </ul>
@@ -243,7 +249,11 @@ function Box({ children, open, onOpen }) {
 
 export default function App() {
   const [query, setQuery] = useState("");
-  const [watched, setWatched] = useState([]);
+  const [watched, setWatched] = useState(function () {
+    const data = localStorage.getItem("watched");
+    const result = JSON.parse(data) || [];
+    return result;
+  });
   const [isOpen1, setIsOpen1] = useState(true);
   const [isOpen2, setIsOpen2] = useState(true);
   const [selectedMovie, setSelectedMovie] = useState(null);
@@ -252,17 +262,35 @@ export default function App() {
     setSelectedMovie(null);
   }
 
+  function onDeleteWatched(id) {
+    setWatched((prev) => {
+      return prev.filter((element) => element.imdbID !== id);
+    });
+  }
+
   function addMovieToWatched(movie) {
     setWatched((watched) => [...watched, movie]);
   }
 
   const [movies, loading, error] = useMovies(query);
 
+  useEffect(
+    function () {
+      localStorage.setItem("watched", JSON.stringify(watched));
+    },
+    [watched],
+  );
+
   return (
     <>
       <NavBar>
         <Logo />
-        <Search query={query} setQuery={setQuery} movies={movies} />
+        <Search
+          query={query}
+          setQuery={setQuery}
+          movies={movies}
+          error={error}
+        />
       </NavBar>
       <Main>
         <Box open={isOpen1} onOpen={setIsOpen1}>
@@ -284,7 +312,10 @@ export default function App() {
           ) : (
             <>
               <MovieSummary watched={watched} />
-              <MovieWatchedList watched={watched} />
+              <MovieWatchedList
+                onDeleteWatched={onDeleteWatched}
+                watched={watched}
+              />
             </>
           )}
         </Box>

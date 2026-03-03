@@ -24,7 +24,7 @@ function useMovies(query) {
 
           const data = await result.json();
           if (data.Response === "False") {
-            throw new Error("There is now films");
+            throw new Error("There is no films");
           }
           setMovies(data.Search);
           setError("");
