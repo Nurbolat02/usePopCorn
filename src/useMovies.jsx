@@ -1,44 +1,59 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
 const KEY = "c9ff1f00";
 
-function useMovies(query) {
+export function useMovies(query) {
   const [movies, setMovies] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
-  //   `http://www.omdbapi.com/?apikey=${KEY}&s=Inter`
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(
     function () {
-      async function getData() {
+
+      const controller = new AbortController();
+
+      async function fetchMovies() {
         try {
-          setLoading(true);
+          setIsLoading(true);
           setError("");
-          const result = await fetch(
+
+          const res = await fetch(
             `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
+            { signal: controller.signal }
           );
 
-          if (!result.ok) {
-            throw new Error("There is some problem with fetch");
-          }
+          if (!res.ok)
+            throw new Error("Something went wrong with fetching movies");
 
-          const data = await result.json();
-          if (data.Response === "False") {
-            throw new Error("There is no films");
-          }
+          const data = await res.json();
+          if (data.Response === "False") throw new Error("Movie not found");
+
           setMovies(data.Search);
           setError("");
-        } catch (error) {
-          setError(error.message);
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.log(err.message);
+            setError(err.message);
+          }
         } finally {
-          setLoading(false);
+          setIsLoading(false);
         }
       }
-      getData();
+
+      if (query.length < 3) {
+        setMovies([]);
+        setError("");
+        return;
+      }
+
+      fetchMovies();
+
+      return function () {
+        controller.abort();
+      };
     },
-    [query],
+    [query]
   );
 
-  return [movies, loading, error];
+  return { movies, isLoading, error };
 }
-export default useMovies;

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-export default function useKey(key, action) {
+export function useKey(key, action) {
   useEffect(
     function () {
       function callback(e) {
@@ -8,12 +8,13 @@ export default function useKey(key, action) {
           action();
         }
       }
+
       document.addEventListener("keydown", callback);
 
       return function () {
         document.removeEventListener("keydown", callback);
       };
     },
-    [action, key],
+    [action, key]
   );
 }
